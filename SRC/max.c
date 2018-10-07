@@ -1,0 +1,27 @@
+#include "aduc812.h"
+
+#define MAXBASE 0x8
+
+// set value of a register
+void write_max( unsigned char xdata *regnum, unsigned char val )
+{
+    unsigned char oldDPP = DPP;
+
+    DPP     = MAXBASE;
+    *regnum = val;
+    DPP     = oldDPP;
+}
+
+// get value of a register
+unsigned char read_max( unsigned char xdata *regnum )
+{
+    unsigned char oldDPP=DPP;
+    unsigned char val;
+
+    DPP = MAXBASE;
+    val = *regnum;
+    DPP = oldDPP;
+
+    return val;
+}
+
