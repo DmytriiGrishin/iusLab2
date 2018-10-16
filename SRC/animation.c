@@ -2,30 +2,18 @@
 #include "led.h"
 #include "system_timer.h"
 
-// Timer T1 (mode switching) is being used for PWM (pulse width modulation)
-
-// Brightness of bulbs
-u8 power=0;
-
-// LEVEL_ON
-u8 power_l1=0xF0;
-u8 power_h1=0xFF;
-
-u8 direction;
-// time of next frame
+u8 power_l=0x18;
+u8 power_h=0xFA;
 time next_frame;
-
-
-const time FRAME_DELAY=500;
-
-void T1_ISR( void ) __interrupt (1);
-
 u8 powers[8];
 u8 leds_state[8];
 u8 state_to_power[8];
+u8 duty_cycle; 
+const time FRAME_DELAY=2000;
+void T1_ISR( void ) __interrupt (1);
 
 void initialize_animation() {
-	TMOD |= 0b00010000; //Timer1, internal generator of frequency, 16 bit counter
+	TMOD |= 0b00010000;
 	SetVector(0x201B, (void *)T1_ISR);
 	state_to_power[0] = 100;
 	state_to_power[1] = 0;
@@ -43,12 +31,10 @@ void update_powers() {
 		powers[i] = state_to_power[leds_state[i]];
 	}
 }
-void enable_animation(){
-	direction = INCREASE_BRIGHTNESS;
+
+void enable_animation() {
 	duty_cycle = 0;
 	next_frame = get_ms() + FRAME_DELAY;
-
-		
 	leds_state[0] = 0;
 	leds_state[1] = 1;
 	leds_state[2] = 2;
@@ -58,42 +44,46 @@ void enable_animation(){
 	leds_state[6] = 6;	
 	leds_state[7] = 7;	
 	update_powers();
-	TH1 = power_h1;
-	TL1 = power_l1;
-	
-	ET1 = 1;       //enable (interrupts from) timer 1
-	TR1 = 1;       //allow timer to count
+	TH1 = power_h;
+	TL1 = power_l;
+	ET1 = 1;       
+	TR1 = 1;      
 }
 
-void disable_animation(){
-	ET1 = 0; // disable (interrupts from) timer 1
-	TR1 = 0; // stop counting
+void disable_animation() {
+	ET1 = 0; 
+	TR1 = 0; 
 }
-
-u8 duty_cycle;
 void update_leds() {
-	u8 leds = 0;
+	u8 leds1 = 0;
 	u8 i;
-	for (i = 0; i < 8; i++) {
-		leds |= powers[i] / 20 > duty_cycle ? 1 : 0;
-		leds = leds << 1;
+	for (i = 0; i < 7; i++) {
+		leds1 |= powers[i] / 20 > duty_cycle ? 1 : 0;
+		leds1 = leds1 << 1;
 	}	
-	leds(leds);
-	if (duty_cycle >= 4) {
-		duty_cycle = 0;
-	}	
-
+	leds1 |= powers[7] / 20 > duty_cycle ? 1 : 0;
+	leds(leds1);
 }	
+
 void update_state() {
 	u8 i;
 	for (i = 0; i < 8; i++) {
 		leds_state[i] = leds_state[i] == 7 ? 0 : leds_state[i] + 1;
 	}
 }
-void T1_ISR( void ) __interrupt (1){
-	duty_cycle++;
-	TH1 = power_h1;
-	TL1 = power_l1;
+
+void update_duty_cycle() {
+	if (duty_cycle >= 4) {
+		duty_cycle = 0;
+	} else {
+		duty_cycle++;		
+	}
+}
+
+void T1_ISR(void) __interrupt (1){
+	TH1 = power_h;
+	TL1 = power_l;
+	update_duty_cycle();
 	update_leds();
 	if (get_ms() >= next_frame) {
 		next_frame = get_ms() + FRAME_DELAY;

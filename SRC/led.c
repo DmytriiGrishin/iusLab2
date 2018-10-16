@@ -2,37 +2,20 @@
 #include "max.h"
 
 static unsigned char old_led = 0;
-
-// set state of a bulb
-void led( unsigned char n, unsigned char on )
-{
+void led(unsigned char n, unsigned char on) {
     unsigned char c;
     unsigned char mask = 1;
-
     if( n > 7 ) return;
-
     c = old_led;
-
     mask <<= n;
-
     if( on )
         c |= mask;
     else
         c &= ~mask;         
-
     write_max(SV, c);     
-
     old_led = c;
 }
-
-// set states of all bulbs
-void leds( unsigned char on )
-{
+void leds (unsigned char on) {
     write_max( SV, on );
     old_led = on;
 }
-
-
-
-
-
